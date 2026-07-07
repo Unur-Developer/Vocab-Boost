@@ -135,8 +135,7 @@
   .icon-btn:active{transform:scale(0.92);}
   .icon-btn.fav.active{background:var(--gold-soft); color:var(--gold); border-color:var(--gold);}
   .tap-hint{font-size:11px; color:var(--text-dim); margin-left:auto; font-family:'IBM Plex Mono',monospace;}
-  .skeleton{opacity:0.5;}
-  .skeleton .example, .skeleton .pron{background:linear-gradient(90deg, var(--surface-soft), var(--surface-line), var(--surface-soft)); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; color:transparent; height:14px; width:70%;}
+  .skeleton-line{display:inline-block; width:90px; height:13px; border-radius:6px; background:linear-gradient(90deg, var(--surface-soft), var(--surface-line), var(--surface-soft)); background-size:200% 100%; animation:shimmer 1.4s infinite;}
   @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
 
   /* ---------- buttons ---------- */
@@ -267,6 +266,68 @@
   }
   .tabbar .tab .ic{font-size:19px;}
   .tabbar .tab.active{color:var(--gold);}
+
+  /* ---------- theme toggle ---------- */
+  .theme-toggle{
+    width:34px; height:34px; border-radius:50%;
+    background:var(--surface-soft); border:1px solid var(--surface-line);
+    display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;
+  }
+  .theme-toggle:active{transform:scale(0.92);}
+
+  /* ---------- light mode palette ---------- */
+  :root[data-theme="light"]{
+    --bg-top:#f8f3e6;
+    --bg-bottom:#ecdec0;
+    --surface:#ffffff;
+    --surface-soft:#f2ecdd;
+    --surface-line: rgba(30,24,10,0.10);
+    --gold:#b3771e;
+    --gold-soft: rgba(179,119,30,0.14);
+    --teal:#178f78;
+    --coral:#c14f36;
+    --text:#28230f;
+    --text-muted:#6b6249;
+    --text-dim:#948a6b;
+  }
+  [data-theme="light"] body::before{
+    background: radial-gradient(120% 100% at 50% 100%, rgba(179,119,30,0.10), transparent 70%);
+  }
+  [data-theme="light"] .tabbar{ background: rgba(255,255,255,0.92); }
+  [data-theme="light"] .overlay{ background: rgba(40,32,10,0.35); }
+  [data-theme="light"] .btn-primary{ color:#fffaf0; }
+
+  /* ---------- example translation (back of card) ---------- */
+  .ex-text-mn{display:block; margin-top:5px; color:var(--text-dim); font-size:12px; line-height:1.4;}
+
+  /* ---------- spelling test ---------- */
+  .spelling-wrap{background:var(--surface); border:1px solid var(--surface-line); border-radius:var(--radius); padding:16px; margin-bottom:14px;}
+  .spelling-input-row{display:flex; align-items:center; gap:10px;}
+  .spelling-input{
+    flex:1; padding:13px 14px; background:var(--surface-soft); border:1px solid var(--surface-line);
+    border-radius:var(--radius-sm); color:var(--text); font-size:18px; outline:none; font-family:'IBM Plex Mono',monospace;
+    letter-spacing:0.03em;
+  }
+  .spelling-input:focus{border-color:var(--gold);}
+  .spelling-input[disabled]{opacity:0.7;}
+  .spelling-count{font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text-muted); flex-shrink:0;}
+  .spelling-hint{display:flex; gap:6px; flex-wrap:wrap; margin-top:14px; justify-content:center;}
+  .spelling-hint .hl{
+    min-width:22px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:18px; font-weight:700;
+    padding-bottom:4px; border-bottom:2px solid var(--surface-line);
+  }
+  .spelling-hint .hl.first{color:var(--teal); border-color:var(--teal);}
+  .spelling-hint .hl.last{color:var(--text-dim); border-color:var(--text-dim);}
+  .spelling-hint .hl.wrong{color:var(--coral); border-color:var(--coral);}
+  .spelling-answer{text-align:center; color:var(--text-muted); font-size:14px; margin-bottom:8px;}
+  .spelling-answer b{color:var(--teal);}
+
+  /* ---------- known button in word list ---------- */
+  .known-btn{
+    width:30px; height:30px; font-size:14px; background:var(--surface-soft); border:1px solid var(--surface-line); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; color:var(--teal); flex-shrink:0;
+  }
+  .known-btn:active{transform:scale(0.9);}
 </style>
 </head>
 <body>
@@ -627,7 +688,350 @@ const RAW_WORDS = [
 ["refugee camp","дүрвэгсдийн лагерь","Багц Ж"]
 ];
 
-const WORDS = RAW_WORDS.map(function(w,i){ return {key:String(i), en:w[0], mn:w[1], cat:w[2]}; });
+const EXAMPLES = [
+  ["The report showed a clear bias toward one side.", "Тайлан нэг талыг барьсан тодорхой хандлагыг харуулсан."],
+  ["She is bilingual in English and Mongolian.", "Тэр Англи, Монгол хэлээр хоёр хэлтэй ярьдаг."],
+  ["He used binoculars to watch the birds.", "Тэр шувуудыг ажиглахын тулд дуран ашигласан."],
+  ["The birch trees turned yellow in autumn.", "Хусан модод намар шаргал өнгөтэй болов."],
+  ["The new movie became a summer blockbuster.", "Шинэ кино зуны хит кино боллоо."],
+  ["The fast car seemed to blur past us.", "Хурдтай машин бидний хажуугаар бүдгэрэн өнгөрөв."],
+  ["He likes to boast about his achievements.", "Тэр амжилтаараа гайхуулах дуртай."],
+  ["The project got bogged down in paperwork.", "Төсөл цаасан ажилд гацаанд оров."],
+  ["Farmers breed cattle for milk and meat.", "Тариаланчид сүү, махны төлөө үхэр нэмэгдүүлдэг."],
+  ["Exercise can boost your energy levels.", "Дасгал хөдөлгөөн эрч хүчийг дэмждэг."],
+  ["The house was built with red brick.", "Байшинг улаан тоосгоор баригдсан."],
+  ["The travel brochure listed many destinations.", "Аяллын танилцуулгад олон газар жагсаагдсан байв."],
+  ["A small brook ran through the forest.", "Жижиг горхи ойгоор урсаж байв."],
+  ["She recorded the wedding with a camcorder.", "Тэр хуримыг видео камераар бичсэн."],
+  ["The soldier's uniform had green camouflage.", "Цэргийн хувцас ногоон өнгөлөн далдлалттай байв."],
+  ["The photographer tried to capture the sunset.", "Гэрэл зурагчин наран жаргахыг барьж авахыг оролдов."],
+  ["Trees absorb carbon dioxide from the air.", "Мод агаараас нүүрстөрөгчийн давхар ислийг шингээдэг."],
+  ["A lion is a well-known carnivore.", "Арслан бол алдартай махчин амьтан юм."],
+  ["The caterpillar turned into a butterfly.", "Уст хорхой эрвээхэй болж хувирав."],
+  ["The human body has trillions of cells.", "Хүний бие тэрбум тэрбум эстэй."],
+  ["The dog began to chase the cat.", "Нохой муурыг хөөж эхлэв."],
+  ["The factory produces chemical products.", "Үйлдвэр химийн бүтээгдэхүүн үйлдвэрлэдэг."],
+  ["List the events in chronological order.", "Үйл явдлуудыг он цагийн дарааллаар жагсаа."],
+  ["The sailor wanted to circumnavigate the globe.", "Далайчин дэлхийг тойрон далайгаар аялахыг хүссэн."],
+  ["English is the dominant language in business.", "Англи хэл бизнест давамгайлсан хэл юм."],
+  ["The river forms a large drainage basin.", "Гол том ай сав үүсгэдэг."],
+  ["The dentist used a small drill.", "Шүдний эмч жижиг өрөм ашигласан."],
+  ["The plan has one major drawback.", "Төлөвлөгөө нэг том сул талтай."],
+  ["The drought damaged the crops badly.", "Ган гачиг ургацад маш их хохирол учруулав."],
+  ["He became a drug addict at a young age.", "Тэр залуу насандаа хар тамхичин болжээ."],
+  ["The Qing dynasty ruled for centuries.", "Чин гүрэн олон зууны турш засаглажээ."],
+  ["She works hard to earn a living.", "Тэр амьжиргаагаа олохын тулд хичээнгүйлэн ажилладаг."],
+  ["He wore an ear plug to sleep quietly.", "Тэр чимээгүй унтахын тулд чихний бөглөө хийсэн."],
+  ["We took the elevator to the tenth floor.", "Бид арваддугаар давхарт цахилгаан шатаар гарав."],
+  ["The project is still in its embryonic stage.", "Төсөл одоо ч эхний буюу үр хөврөлийн шатандаа байна."],
+  ["Their endeavor to help others was admirable.", "Бусдад туслах тэдний оролдлого биширмээр байлаа."],
+  ["She is engaged in a new research project.", "Тэр шинэ судалгааны төсөлд оролцоотой байна."],
+  ["The main entrance is on the left side.", "Гол орц зүүн талд байрладаг."],
+  ["Eventually, she found the right answer.", "Эцэстээ тэр зөв хариултыг олжээ."],
+  ["The excavation revealed ancient pottery.", "Малталтаас эртний шавар эдлэл олдов."],
+  ["There is an exception to every rule.", "Дүрэм бүрт онцгой тохиолдол байдаг."],
+  ["Please use the nearest exit in an emergency.", "Яаралтай үед хамгийн ойрын гарцыг ашиглана уу."],
+  ["I expect you to arrive on time.", "Би чамайг цагтаа ирнэ гэж хүлээж байна."],
+  ["The expedition explored the deep jungle.", "Судалгааны баг гүн ширэнгэн ойг судаллаа."],
+  ["Travelling abroad was a great experience.", "Гадаадад аялах нь агуу туршлага байлаа."],
+  ["Space exploration has advanced quickly.", "Сансрын судалгаа хурдацтай хөгжиж байна."],
+  ["The chemical is highly explosive.", "Тэр химийн бодис маш тэсрэмтгий."],
+  ["The report covers an extensive range of topics.", "Тайлан өргөн хэмжээний сэдвүүдийг хамардаг."],
+  ["Dinosaurs became extinct millions of years ago.", "Үлэг гүрвэлүүд сая сая жилийн өмнө устаж үгүй болжээ."],
+  ["Read this short extract from the novel.", "Энэ богино хэсгийг роман номоос уншина уу."],
+  ["She has an extraordinary talent for music.", "Тэр хөгжимд ер бусын авьяастай."],
+  ["The desert has extreme temperatures.", "Цөл эсрэг тэсрэг температуртай."],
+  ["The singer achieved worldwide fame.", "Дуучин дэлхий даяар алдар нэр олжээ."],
+  ["The teacher gave useful feedback on the essay.", "Багш эссэд ашигтай санал хүсэлт өгсөн."],
+  ["We crossed the river by ferry.", "Бид голыг гатлага онгоцоор гатлав."],
+  ["The valley has fertile soil for farming.", "Хөндий газар тариалангийн үржил шимтэй хөрстэй."],
+  ["The student received financial assistance for tuition.", "Оюутан сургалтын төлбөрт санхүүгийн дэмжлэг авав."],
+  ["Every kitchen should have a fire extinguisher.", "Гал тогооны өрөө бүрт гал сөнөөгч байх ёстой."],
+  ["Keep a first-aid kit in your car.", "Машиндаа анхны тусламжийн хэрэгсэл байлгаарай."],
+  ["The candle flame flickered in the wind.", "Лаагийн дөл салхинд чичирч байв."],
+  ["We found old books at the flea market.", "Бид хуучин номуудыг хуучин барааны зах дээрээс олов."],
+  ["The fleet sailed toward the harbor.", "Хөлөг онгоцны бүлэг боомт руу явлаа."],
+  ["Yoga improves the body's flexibility.", "Йога биеийн уян хатан байдлыг сайжруулдаг."],
+  ["We walked along a narrow footpath.", "Бид нарийн явган хүний замаар алхлаа."],
+  ["The animal left a foot print in the mud.", "Амьтан шаварт ул мөр үлдээжээ."],
+  ["I heard a foot step behind me.", "Би ард талдаа алхмын чимээ сонслоо."],
+  ["Fossil fuels cause a lot of pollution.", "Чулуужсан түлш ихээхэн бохирдол үүсгэдэг."],
+  ["He felt frustrated after losing the game.", "Тэр тоглолтод хожигдсоны дараа сэтгэл санаагаар унасан."],
+  ["Reading is a fundamental skill for learning.", "Унших нь сургалтын суурь чадвар юм."],
+  ["Mushrooms are a type of fungi.", "Мөөг бол мөөгөнцрийн нэг төрөл юм."],
+  ["There is no need to make a fuss.", "Ямар ч үймээн бодох хэрэггүй."],
+  ["This new gadget can measure your heart rate.", "Энэ шинэ багаж таны зүрхний цохилтыг хэмждэг."],
+  ["The company managed to gain profit this year.", "Компани энэ жил ашиг олоход амжилттай боллоо."],
+  ["She stood still, her gaze fixed on the sea.", "Тэр хөдөлгөөнгүй зогсоод далай руу ширтэв."],
+  ["The chart highlights the main results.", "Диаграм гол үр дүнг тодруулж харуулдаг."],
+  ["Smoking can harm your health.", "Тамхи татах нь эрүүл мэндэд хор хохирол учруулж болно."],
+  ["She knows how to handle difficult customers.", "Тэр хэцүү үйлчлүүлэгчидтэй хэрхэн харьцахыг мэддэг."],
+  ["The school will implement a new policy.", "Сургууль шинэ бодлогыг хэрэгжүүлнэ."],
+  ["Don't ignore the warning signs.", "Анхааруулах тэмдгүүдийг үл тоож болохгүй."],
+  ["The hurricane destroyed several houses.", "Хар салхи хэд хэдэн байшинг сүйтгэв."],
+  ["She is responsible for housekeeping duties.", "Тэр гэрийн ажлын үүрэг хариуцдаг."],
+  ["They chose to honour his memory.", "Тэд түүний дурсамжийг хүндэтгэхээр шийджээ."],
+  ["We drove fast on the highway.", "Бид хурдны замаар хурдан явлаа."],
+  ["Bears sleep through hibernation in winter.", "Баавгайнууд өвлийн улиралд ичдэг."],
+  ["A cow is a common herbivore.", "Үхэр бол түгээмэл өвсөн тэжээлтэн юм."],
+  ["Don't hesitate to ask for help.", "Тусламж хүсэхдээ бүү эргэлз."],
+  ["The fire looked like hell itself.", "Гал галт там мэт харагдав."],
+  ["The desert has a harsh climate.", "Цөл хатуу ширүүн уур амьсгалтай."],
+  ["Pollution has a harmful effect on health.", "Бохирдол эрүүл мэндэд хортой үр нөлөө үзүүлдэг."],
+  ["The ships rested safely in the harbor.", "Хөлөг онгоцууд боомтод аюулгүй амарч байв."],
+  ["Deforestation destroys the animals' habitat.", "Ой мод устгах нь амьтдын амьдрах орчинг сүйтгэдэг."],
+  ["The teacher gave clear guidance to students.", "Багш сурагчдад тодорхой заавар өглөө."],
+  ["This is a ground breaking discovery in science.", "Энэ бол шинжлэх ухааны анхдагч нээлт юм."],
+  ["The sheep graze in the open field.", "Хонь нээлттэй талбайд бэлчээрлэдэг."],
+  ["The kitchen counter is made of granite.", "Гал тогооны ширээ боржин чулуугаар хийгдсэн."],
+  ["The glacier is slowly melting.", "Мөсөн уул аажмаар хайлж байна."],
+  ["He got injured while playing football.", "Тэр хөл бөмбөг тоглож байхдаа гэмтжээ."],
+  ["The city's geographic location favors trade.", "Хотын газарзүйн байршил худалдаанд таатай."],
+  ["The breed is considered genetically pure.", "Энэ үүлдэр генийн хувьд цэвэр гэж тооцогддог."],
+  ["It seemed impossible to finish on time.", "Цагтаа дуусгах нь боломжгүй мэт санагдаж байв."],
+  ["The price does not include tax.", "Үнэд татвар орсонгүй."],
+  ["The competition was intense this year.", "Энэ жилийн уралдаан асар их байсан."],
+  ["The view from the mountain was incredible.", "Уулнаас харагдах үзэмж гайхамшигтай байлаа."],
+  ["The country celebrated its independence day.", "Улс тусгаар тогтнолын өдрөө тэмдэглэв."],
+  ["Parents have a big influence on children.", "Эцэг эх хүүхдэдээ их нөлөө үзүүлдэг."],
+  ["She sprayed insect repellent before the hike.", "Тэр явган аялалын өмнө шавьж устгагч цацсан."],
+  ["Stress can cause insomnia.", "Стресс нойргүйдэл үүсгэж болно."],
+  ["Her story continues to inspire others.", "Түүний түүх бусдыг урам зориг өгсөөр байна."],
+  ["The insurance agent explained the policy.", "Даатгалын ажилтан гэрээг тайлбарлав."],
+  ["The intensity of the storm increased.", "Шуургын хүчдэл нэмэгдэв."],
+  ["The countries' economies are interdependent.", "Улс орнуудын эдийн засаг харилцан хамааралтай."],
+  ["He faced an internal struggle over the decision.", "Тэр шийдвэрийн талаар дотоод тэмцэлтэй тулгарав."],
+  ["Can you interpret this poem for me?", "Та энэ шүлгийг надад орчуулж өгч чадах уу?"],
+  ["The invader was finally driven away.", "Эзлэн түрэмгийлэгчийг эцэст нь хөөж гаргав."],
+  ["The champion seemed invincible in the ring.", "Аваргачин тэмцээний талбайд ялагдашгүй мэт харагдаж байв."],
+  ["The damage to the bridge was irreparable.", "Гүүрэнд учирсан хохирол засашгүй байв."],
+  ["The janitor cleans the school every evening.", "Цэвэрлэгч орой бүр сургуулийг цэвэрлэдэг."],
+  ["She wore beautiful jewellery to the party.", "Тэр наадамд үзэсгэлэнтэй үнэт эдлэл өмсжээ."],
+  ["The knee is an important joint in the body.", "Өвдөг бол биеийн чухал үе мөч юм."],
+  ["We went kayaking on the calm lake.", "Бид тайван нуур дээр хөнгөн завиар аялав."],
+  ["The knight rode bravely into battle.", "Баатар зоригтойгоор тулаанд оров."],
+  ["Knowledge is power.", "Мэдлэг бол хүч."],
+  ["There is a lack of clean water here.", "Энд цэвэр усны дутагдал байна."],
+  ["The old tower is a famous landmark.", "Тэр эртний цамхаг алдартай ач холбогдолтой газар юм."],
+  ["I am a bit tired today.", "Би өнөөдөр бага зэрэг ядарсан байна."],
+  ["She worked hard to achieve her goal.", "Тэр зорилгодоо хүрэхийн тулд хичээнгүй ажилласан."],
+  ["USA is an abbreviation for United States of America.", "USA гэдэг нь Америкийн Нэгдсэн Улсын товчилсон үг юм."],
+  ["Plants absorb water through their roots.", "Ургамал үндэсээрээ ус шингээдэг."],
+  ["This behavior is not acceptable at school.", "Ийм зан үйл сургуульд хүлээн авах боломжгүй."],
+  ["I accidently deleted the file.", "Би файлыг санамсаргүйгээр устгасан."],
+  ["We accomplished all our tasks on time.", "Бид бүх ажлаа цагтаа биелүүлсэн."],
+  ["Please log into your account.", "Хэрэглэгчийн дансандаа нэвтэрнэ үү."],
+  ["He refused to acknowledge his mistake.", "Тэр өөрийн алдааг хүлээн зөвшөөрөхөөс татгалзав."],
+  ["Adaptation to a new culture takes time.", "Шинэ соёлд дасан зохицоход цаг хугацаа шаардагдана."],
+  ["Phone addiction affects many teenagers.", "Утасны донтол олон өсвөр насныханд нөлөөлдөг."],
+  ["The administrative assistant organized the meeting.", "Захиргааны туслах уулзалтыг зохион байгуулав."],
+  ["I really admire her courage.", "Би түүний зоригийг үнэхээр биширдэг."],
+  ["They decided to adopt a puppy.", "Тэд гөлөг үрчилж авахаар шийджээ."],
+  ["Speaking two languages is a big advantage.", "Хоёр хэлээр ярих нь том давуу тал юм."],
+  ["Climbing the mountain was a real adventure.", "Уулан авирах нь жинхэнэ адал явдал байлаа."],
+  ["The advertisement appeared on every channel.", "Зар сурталчилгаа суваг бүр дээр гарч ирлээ."],
+  ["Art class develops aesthetic appreciation.", "Уран зургийн хичээл гоо сайхны үнэлэмжийг хөгжүүлдэг."],
+  ["The dog became aggressive toward strangers.", "Нохой танихгүй хүмүүст түрэмгий болов."],
+  ["His father served in the air force.", "Түүний аав нисэх хүчинд алба хаасан."],
+  ["We need to find an alternative solution.", "Бид өөр хувилбар шийдэл олох хэрэгтэй."],
+  ["The plane is flying at a high altitude.", "Онгоц далайн түвшнээс дээш өндөрт нисэж байна."],
+  ["The fireworks show was amazing.", "Салют үзүүлбэр гайхмаар байлаа."],
+  ["My ancestor came from the countryside.", "Миний өвөг дээдэс хөдөө нутгаас гаралтай."],
+  ["I regret not studying harder.", "Илүү хичээж сураагүйдээ би харамсдаг."],
+  ["Please remain seated during the flight.", "Нислэгийн үед суудалдаа үлдэнэ үү."],
+  ["He is a renowned scientist.", "Тэр олны танил алдартай эрдэмтэн юм."],
+  ["The company has a good reputation.", "Компани сайн нэр хүндтэй."],
+  ["Passing the exam is a requirement.", "Шалгалтад тэнцэх нь шаардлага юм."],
+  ["The rescue worker saved the child.", "Аврах ажилтан хүүхдийг аврав."],
+  ["Students should respect their teachers.", "Сурагчид багш нараа хүндлэх ёстой."],
+  ["Respiration provides oxygen to the body.", "Амьсгал нь биед хүчилтөрөгч нийлүүлдэг."],
+  ["He went to retrieve his lost keys.", "Тэр алдагдсан түлхүүрээ буцааж авахаар явлаа."],
+  ["She is a great role model for young girls.", "Тэр залуу охидод сайн үлгэр жишээ хүн юм."],
+  ["Snow covered the roof of the house.", "Цас байшингийн дээврийг бүрхэв."],
+  ["The tree's root grew very deep.", "Модны үндэс маш гүн ургажээ."],
+  ["We took a different route home.", "Бид гэртээ өөр замаар харив."],
+  ["The camel walked over the sand dune.", "Тэмээ элсэн манхан дээгүүр алхлаа."],
+  ["She was satisfied with her exam result.", "Тэр шалгалтын дүнгээ сэтгэл хангалуун хүлээж авав."],
+  ["The theory is based on scientific research.", "Онол нь шинжлэх ухааны судалгаанд үндэслэсэн."],
+  ["They went scuba diving near the reef.", "Тэд шүрэн хад орчимд усан доогуур шумбжээ."],
+  ["A sedentary lifestyle can harm your health.", "Хөдөлгөөн багатай амьдралын хэв маяг эрүүл мэндэд хортой."],
+  ["The store offers a wide selection of shoes.", "Дэлгүүр гутлын өргөн сонголт санал болгодог."],
+  ["The teacher asked for a self-assessment.", "Багш өөрийн үнэлгээ хийхийг хүссэн."],
+  ["Public speaking builds self-confidence.", "Олны өмнө үг хэлэх нь өөртөө итгэх итгэлийг бий болгодог."],
+  ["Always keep your self-respect.", "Өөрийгөө хүндлэх байдлаа үргэлж хадгал."],
+  ["This restaurant offers self-service.", "Энэ ресторан бол өөртөө үйлчлэх юм."],
+  ["The storm caused severe damage.", "Шуурга ноцтой хохирол учруулав."],
+  ["There is a shortage of doctors in rural areas.", "Хөдөөгийн бүс нутагт эмч нарын дутагдал байна."],
+  ["They planted a shrub in the garden.", "Тэд цэцэрлэгт бут сөөг тарьжээ."],
+  ["There was no sign of danger.", "Аюулын ямар ч шинж тэмдэг байгаагүй."],
+  ["Please sign the document here.", "Энд баримт бичигт гарын үсэг зурна уу."],
+  ["She remained skeptical about the plan.", "Тэр төлөвлөгөөнд эргэлзсэн хэвээр байв."],
+  ["He made a quick sketch of the house.", "Тэр байшингийн хурдан зураг зурав."],
+  ["The dog began to sniff the ground.", "Нохой газрыг үнэрлэж эхлэв."],
+  ["They decided to split the bill.", "Тэд төлбөрийг хуваахаар шийджээ."],
+  ["Many animals starve during a drought.", "Ган гачигийн үед олон амьтан өлсдөг."],
+  ["She felt anxiety before the exam.", "Тэр шалгалтын өмнө сэтгэл зовнил мэдэрсэн."],
+  ["He decided to apologize for the mistake.", "Тэр алдаандаа уучлал гуйхаар шийджээ."],
+  ["The audience gave loud applause.", "Үзэгчид чанга алга ташилт өгсөн."],
+  ["I have a doctor's appointment tomorrow.", "Надад маргааш эмчийн уулзалт бий."],
+  ["He completed a two-year apprenticeship.", "Тэр хоёр жилийн сургалтын хугацааг дуусгасан."],
+  ["Choose appropriate clothes for the interview.", "Ярилцлагад тохиромжтой хувцас сонго."],
+  ["The bridge has a beautiful stone arch.", "Гүүр үзэсгэлэнтэй чулуун нумтай."],
+  ["The archaeologist found ancient tools.", "Археологич эртний багаж хэрэгсэл олжээ."],
+  ["The architect designed a modern building.", "Уран барилгач орчин үеийн барилга зохион бүтээв."],
+  ["The aristocrat lived in a huge castle.", "Язгууртан асар том цайзад амьдардаг байв."],
+  ["She is able to articulate her ideas clearly.", "Тэр өөрийн санааг тод хэлж чаддаг."],
+  ["The whole school gathered for the assembly.", "Бүх сургууль цугларалтад оролцов."],
+  ["The astronaut floated in space.", "Сансрын нисгэгч сансарт хөвж байв."],
+  ["She hired an attorney for the case.", "Тэр хэргийн төлөө өмгөөлөгч авав."],
+  ["He is writing his own autobiography.", "Тэр өөрийн намтрыг бичиж байна."],
+  ["The tickets are still available online.", "Тасалбар онлайнаар одоо ч боломжтой байна."],
+  ["The avalanche buried the small village.", "Цасан нуранги жижиг тосгоныг булсан."],
+  ["There was an awkward silence in the room.", "Өрөөнд эвгүй чимээгүй байдал үүсэв."],
+  ["The city plans to ban plastic bags.", "Хот хуванцар уутыг хориглохоор төлөвлөж байна."],
+  ["The barrel was full of old wine.", "Торх хуучин дарсаар дүүрэн байв."],
+  ["He swung the baseball bat hard.", "Тэр бэйсболын цохиурыг хүчтэй савлав."],
+  ["We store old boxes in the basement.", "Бид хуучин хайрцгуудыг хонгилд хадгалдаг."],
+  ["A wooden beam supports the roof.", "Модон хөндлөвч дээврийг тэтгэдэг."],
+  ["The beggar asked for some food.", "Гуйланчин хоол хүсэв."],
+  ["Regular exercise has many benefits.", "Тогтмол дасгал хийх нь олон ашиг тустай."],
+  ["The flower's stem was very thin.", "Цэцгийн иш маш нимгэн байв."],
+  ["Take one step at a time.", "Нэг удаад нэг алхам хий."],
+  ["The sunset over the mountains was stunning.", "Уулсын цаадах наран жаргалт гайхалтай байлаа."],
+  ["Each subheading explains a small topic.", "Дэд гарчиг бүр жижиг сэдвийг тайлбарладаг."],
+  ["The unknown substance was tested in the lab.", "Тодорхойгүй бодисыг лабораторид шинжилжээ."],
+  ["The teacher used sugar as a substitute for honey.", "Багш зөгийн балны оронд элсэн чихрийг орлогч болгон ашигласан."],
+  ["Many people suffer from allergies.", "Олон хүн харшлаас болж зовдог."],
+  ["Let me sum up the main points.", "Гол санаануудыг дүгнэе."],
+  ["We have sufficient food for the trip.", "Бидэнд аяллын хангалттай хоол байна."],
+  ["Children need adult supervision at the pool.", "Хүүхдүүдэд усан сан дээр насанд хүрэгчийн удирдлага хэрэгтэй."],
+  ["The store has a large supply of rice.", "Дэлгүүрт цагаан будааны их хангамж байна."],
+  ["He needs surgery on his knee.", "Түүнд өвдгийн мэс засал хийлгэх шаардлагатай."],
+  ["The surveyor measured the land carefully.", "Зааварлагч газрыг нямбай хэмжив."],
+  ["It is hard to survive in the desert.", "Цөлд амьд гарах нь хэцүү."],
+  ["The suspension bridge crosses the wide river.", "Дүүжин гүүр өргөн голыг гаталдаг."],
+  ["The police found the man suspicious.", "Цагдаа тэр эрийг сэжигтэй гэж үзжээ."],
+  ["The company showed sustained growth.", "Компани тасралтгүй өсөлт үзүүлэв."],
+  ["It was a sweltering day in July.", "7-р сард бүчим халуун өдөр байлаа."],
+  ["The knight carried a long sword.", "Баатар урт сэлэм зүүсэн байв."],
+  ["Stop teasing your little brother.", "Дүүгээ шоолохоо боль."],
+  ["Medical terminology can be confusing.", "Эмнэлгийн мэргэжлийн үг хэллэг ойлгоход хэцүү байдаг."],
+  ["Pack your toiletries before the trip.", "Аяллын өмнө ариун цэврийн хэрэгслээ бэлдээрэй."],
+  ["The ancient tomb was discovered by archaeologists.", "Эртний булшийг археологичид олжээ."],
+  ["The old trade route connected two countries.", "Хуучин худалдааны зам хоёр улсыг холбож байв."],
+  ["I need to transfer money to my friend.", "Би найздаа мөнгө шилжүүлэх хэрэгтэй."],
+  ["The hunter set a trap for the fox.", "Анчин үнэгэнд зориулж хавх тавив."],
+  ["We went trekking in the mountains last summer.", "Бид өнгөрсөн зун ууланд явган аялсан."],
+  ["The team made tremendous progress this year.", "Баг энэ жил асар их ахиц гаргалаа."],
+  ["This math problem is really tricky.", "Энэ математикийн бодлого үнэхээр төвөгтэй."],
+  ["Bananas grow well in a tropical climate.", "Гадил жимс халуун орны цаг уурт сайн ургадаг."],
+  ["Winning the championship is our ultimate goal.", "Аваргалахад хүрэх нь бидний туйлын зорилго юм."],
+  ["The magic trick was unbelievable.", "Ид шид итгэмээргүй байлаа."],
+  ["The charity helps underprivileged children.", "Буяны сан ядуу буурай хүүхдүүдэд тусалдаг."],
+  ["Stay in your own lane while driving.", "Жолоо барихдаа өөрийн эгнээндээ бай."],
+  ["I haven't seen him lately.", "Би түүнийг сүүлийн үед хараагүй байна."],
+  ["Hens lay eggs almost every day.", "Тахиа бараг өдөр бүр өндөглөдөг."],
+  ["She handed out a leaflet about the event.", "Тэр арга хэмжээний тухай товхимол тараав."],
+  ["He became a legendary athlete.", "Тэр домогт тамирчин болжээ."],
+  ["He felt lonely after moving to a new city.", "Тэр шинэ хот руу нүүсний дараа ганцаардмал санагдав."],
+  ["She touched the piano keys lightly.", "Тэр төгөлдөр хуурын товчлуурыг хөнгөн хүрлээ."],
+  ["A magpie landed on the fence.", "Шаазгай хашаан дээр буув."],
+  ["The road needs regular maintenance.", "Зам тогтмол засвар хийлгэх шаардлагатай."],
+  ["Malaria is common in tropical regions.", "Хумхаа өвчин халуун орны бүс нутагт түгээмэл байдаг."],
+  ["Malnutrition affects children's growth.", "Хоол тэжээлийн дутагдал хүүхдийн өсөлтөд нөлөөлдөг."],
+  ["A whale is the largest mammal on Earth.", "Халим бол дэлхийн хамгийн том сүүн тэжээлтэн юм."],
+  ["The merchant sold silk from his shop.", "Худалдаачин дэлгүүрээсээ торго худалдаж байв."],
+  ["This method works best for beginners.", "Энэ арга анхлан суралцагчдад хамгийн тохиромжтой."],
+  ["New York is a busy metropolitan city.", "Нью Йорк бол завгүй их хотын нэг юм."],
+  ["Bird migration happens every autumn.", "Шувуудын шилжилт хөдөлгөөн жил бүрийн намар болдог."],
+  ["He joined the military at eighteen.", "Тэр арван найман настайдаа цэргийн албанд оров."],
+  ["The workers dug deep into the mine.", "Ажилчид уул уурхайд гүн ухаж байв."],
+  ["The mischievous boy hid his sister's shoes.", "Сахилгагүй хүү эгчийнхээ гутлыг нуужээ."],
+  ["The monk prayed quietly in the temple.", "Лам сүм дотор чимээгүй ном уншиж байв."],
+  ["Music can change your mood quickly.", "Хөгжим таны ааш төрхийг хурдан өөрчилж чадна."],
+  ["Good teachers motivate their students.", "Сайн багш нар сурагчдаа сэдэлжүүлдэг."],
+  ["She works as a multilingual translator.", "Тэр олон хэлтэй орчуулагчаар ажилладаг."],
+  ["The earthquake was a devastating natural disaster.", "Газар хөдлөлт сүйрлийн байгалийн гамшиг байсан."],
+  ["The navigator guided the ship safely.", "Чиглэл тогтоогч хөлөг онгоцыг аюулгүй чиглүүлэв."],
+  ["Clean water is a basic necessity.", "Цэвэр ус бол үндсэн хэрэгцээт зүйл юм."],
+  ["The charity supports needy families.", "Буяны сан ядуу зүдүү өрхүүдэд тусалдаг."],
+  ["The air is mostly made of nitrogen.", "Агаар нь ихэвчлэн азотоос тогтдог."],
+  ["There is no doubt that she will succeed.", "Тэр амжилтад хүрэх нь эргэлзээгүй."],
+  ["Mongolia is proud of its nomadic heritage.", "Монгол улс өөрийн нүүдлийн өв соёлоор бахархдаг."],
+  ["Did you notice the change in the schedule?", "Та хуваарийн өөрчлөлтийг анзаарсан уу?"],
+  ["Fresh vegetables provide good nourishment.", "Шинэ хүнсний ногоо сайн илчлэг өгдөг."],
+  ["Good nutrition is important for children.", "Сайн шим тэжээл хүүхдэд чухал юм."],
+  ["The forest remained undisturbed for centuries.", "Ой олон зууны турш хүний гар хүрээгүй хэвээр байв."],
+  ["The cause of the illness is still unknown.", "Өвчний шалтгаан одоо хүртэл үл мэдэгдэх байна."],
+  ["I need to unpack my suitcase.", "Би чемоданаа задлах хэрэгтэй."],
+  ["Please unplug the TV before cleaning.", "Цэвэрлэхийн өмнө телевизийг салгана уу."],
+  ["The weather here is very variable.", "Энд цаг агаар маш тогтворгүй."],
+  ["The shop sells various kinds of fruit.", "Дэлгүүр олон янзын жимс худалдаалдаг."],
+  ["The desert stretched over a vast area.", "Цөл өргөн уудам талбайг эзэлж байв."],
+  ["The veterinarian treated the injured dog.", "Малын эмч гэмтсэн нохойг эмчилжээ."],
+  ["The victim was taken to the hospital.", "Хохирогчийг эмнэлэгт хүргэв."],
+  ["A vulture circled above the desert.", "Тас шувуу цөлийн дээгүүр тойрч байв."],
+  ["Workers demanded a higher wage.", "Ажилчид өндөр цалин шаардав."],
+  ["They painted the wall blue.", "Тэд ханыг цэнхэр өнгөөр будсан."],
+  ["The goods are stored in a large warehouse.", "Бараа том агуулахад хадгалагдаж байна."],
+  ["There must be another way to solve this.", "Үүнийг шийдэх өөр арга зам байх ёстой."],
+  ["The wealthy family owned three houses.", "Тэр чинээлэг гэр бүл гурван байшинтай байв."],
+  ["The museum displays ancient weapons.", "Музей эртний зэвсэг үзэсгэлэнлэж байна."],
+  ["She pulled the weeds from the garden.", "Тэр цэцэрлэгээс зэрлэг ургамлыг зулгаав."],
+  ["He wants to lose some weight.", "Тэр жингээ бага зэрэг хасахыг хүсдэг."],
+  ["Sleep is important for mental wellbeing.", "Унтах нь сэтгэцийн сайн сайхан байдалд чухал."],
+  ["She spoke in a soft whisper.", "Тэр зөөлөн шивнэн ярив."],
+  ["Wild horses run freely on the steppe.", "Зэрлэг адуунууд талд чөлөөтэй гүйдэг."],
+  ["A willow tree grew beside the river.", "Бургас мод голын дэргэд ургаж байв."],
+  ["A stone cracked the window pane.", "Чулуу цонхны шилийг хагалав."],
+  ["The flood wiped out several villages.", "Үер хэд хэдэн тосгоныг арчиж дарав."],
+  ["She went to withdraw money from the bank.", "Тэр банкнаас мөнгө буцааж авахаар явлаа."],
+  ["He does a workout every morning.", "Тэр өглөө бүр дасгал хийдэг."],
+  ["Age brought a few wrinkles to her face.", "Нас нь түүний нүүрэнд хэдэн үрчлээ авчирсан."],
+  ["He had to yell to be heard.", "Түүнийг сонсогдохын тулд хашхирах хэрэгтэй болов."],
+  ["Obesity is a growing health problem.", "Таргалалт улам бүр нэмэгдэж буй эрүүл мэндийн асуудал юм."],
+  ["Animals protect their offspring from danger.", "Амьтад үр төлөө аюулаас хамгаалдаг."],
+  ["This job is a great opportunity for her.", "Энэ ажил түүнд гайхалтай боломж юм."],
+  ["The orphanage cares for many children.", "Өнчин хүүхдийн асрамжийн газар олон хүүхдийг харж хандаж байна."],
+  ["Don't overestimate how much time you have.", "Танд хэр их цаг байгааг хэтрүүлэн үнэлж болохгүй."],
+  ["Plants release oxygen during the day.", "Ургамал өдрийн цагт хүчилтөрөгч ялгаруулдаг."],
+  ["The island felt like paradise.", "Арал диваажин мэт санагдав."],
+  ["A tapeworm is a common parasite.", "Соловь хорхой түгээмэл шимэгч юм."],
+  ["What is the purpose of this meeting?", "Энэ уулзалтын зорилго юу вэ?"],
+  ["Korea is located on a peninsula.", "Солонгос хойг дээр байрладаг."],
+  ["The pharmacist explained how to take the medicine.", "Эмийн санч эмийг хэрхэн хэрэглэхийг тайлбарлав."],
+  ["She bought some medicine at the pharmacy.", "Тэр эмийн сангаас эм худалдаж авав."],
+  ["The northern lights are a rare phenomenon.", "Хойд туяа ховор үзэгдэл юм."],
+  ["The physicist studies the laws of nature.", "Физикч байгалийн хуулиудыг судалдаг."],
+  ["A tall pine tree stood near the cabin.", "Өндөр нарс мод байшингийн дэргэд зогсож байв."],
+  ["The plain stretched to the horizon.", "Тал газар алсын хараа хүртэл үргэлжилж байв."],
+  ["The bird's plumage was bright blue.", "Шувууны өд сөд тод цэнхэр байв."],
+  ["The plumber fixed the leaking pipe.", "Сантехникч гоожиж буй хоолойг засав."],
+  ["The coach continued to praise his team.", "Дасгалжуулагч багаа магтсаар байв."],
+  ["Tell me precisely what happened.", "Юу болсныг яг тодорхой хэлж өг."],
+  ["Preservation of wildlife is very important.", "Зэрлэг амьтдын хамгаалал маш чухал."],
+  ["Wearing a mask can prevent infection.", "Маск зүүх нь халдвараас урьдчилан сэргийлж болно."],
+  ["The company plans to promote healthy eating.", "Компани эрүүл хооллолтыг дэмжихээр төлөвлөж байна."],
+  ["This land is private property.", "Энэ газар хувийн өмч хөрөнгө юм."],
+  ["Parents provide food and shelter for their children.", "Эцэг эх хүүхдэддээ хоол хүнс, орон байраар хангадаг."],
+  ["She studies psychology at university.", "Тэр их сургуульд сэтгэл судлал сурдаг."],
+  ["The author plans to publish a new book.", "Зохиолч шинэ ном хэвлэхээр төлөвлөж байна."],
+  ["Water helps quench your thirst.", "Ус цангаагаа тайлахад тусалдаг."],
+  ["The movie was quite interesting.", "Кино нэлээд сонирхолтой байсан."],
+  ["We had a short quiz in class today.", "Бид өнөөдөр ангид богино асуулт сорил өгсөн."],
+  ["The device measures radiation levels.", "Төхөөрөмж цацрагийн түвшинг хэмждэг."],
+  ["Uranium is a radioactive element.", "Уран бол цацраг идэвхт элемент юм."],
+  ["Thousands live in the refugee camp.", "Мянга мянган хүн дүрвэгсдийн лагерьт амьдардаг."],
+];
+
+const WORDS = RAW_WORDS.map(function(w,i){
+  var ex = EXAMPLES[i];
+  return {
+    key: String(i), en: w[0], mn: w[1], cat: w[2],
+    example_en: ex ? ex[0] : "",
+    example_mn: ex ? ex[1] : ""
+  };
+});
 const TOTAL_DEFAULT = WORDS.length;
 const PER_DAY_SWITCH_DATE = "2026-07-01"; // энэ өдрөөс эхлэн PER_DAY = 5
 function getPerDay(){
@@ -671,8 +1075,27 @@ var STATE = {
   modal: null,
   searchQuery: "",
   learnedQuery: "",
-  learnedFilterCat: "all"
+  learnedFilterCat: "all",
+  theme: "dark"       // "dark" | "light"
 };
+
+/* =========================================================
+   THEME
+   ========================================================= */
+async function loadTheme(){
+  var t = await sGet("theme");
+  STATE.theme = (t === "light") ? "light" : "dark";
+  applyTheme();
+}
+function applyTheme(){
+  document.documentElement.setAttribute("data-theme", STATE.theme === "light" ? "light" : "dark");
+}
+async function toggleTheme(){
+  STATE.theme = STATE.theme === "light" ? "dark" : "light";
+  applyTheme();
+  await sSet("theme", STATE.theme);
+  render();
+}
 
 async function loadProgress(){
   var raw = await sGet("progress");
@@ -704,13 +1127,16 @@ function getWord(key){
   return WORDS[parseInt(key,10)] || null;
 }
 
+function activeQueueWords(){
+  // "Мэддэг" гэж тэмдэглэсэн болон аль хэдийн цээжилсэн үгсийг идэвхтэй цувaанаас хасна
+  return allWords().filter(function(w){ return !STATE.progress.learned[w.key]; });
+}
 function todaysBatch(){
-  var all = allWords();
+  var all = activeQueueWords();
   var perDay = getPerDay();
-  // Өмнөх өдрүүдэд хуримтлуулсан үгийн тоог тогтмол 8-аар тооцож,
-  // 2026-07-01-c хойш шинэ багц бүрийг 5-аар тооцно.
-  var start = STATE.progress.completedDays * perDay;
-  return all.slice(start, start + perDay);
+  // Цээжилээгүй үлдсэн үгсээс дараагийн perDay-г авна (аль хэдийн мэддэг/цээжилсэн
+  // үгс автоматаар алгасагдана, learned дэх бичлэг устгагдахгүй тул урьдын ахиц хэвээр хадгалагдана)
+  return all.slice(0, perDay);
 }
 
 function reviewBatch(){
@@ -726,6 +1152,15 @@ function reviewBatch(){
     return (la.lastReview||0) - (lb.lastReview||0);
   });
   return keys.slice(0, REVIEW_PER_DAY).map(getWord).filter(Boolean);
+}
+
+async function markKnown(key){
+  if(STATE.progress.learned[key]) return;
+  var w = getWord(key);
+  STATE.progress.learned[key] = {learnedDate: todayStr(), lastReview: Date.now(), reviewCount:0};
+  await saveProgress();
+  toast("✅ \""+(w?w.en:"")+"\" мэддэг үгэнд орлоо");
+  render();
 }
 
 function isCompletedToday(){
@@ -765,13 +1200,12 @@ async function ensureEnrichment(words){
 
   render(); // show skeletons while fetching
 
-  var prompt = "Чи Монгол хэлээр Англи хэл сурдаг хүнд тусалдаг туслах. Доорх Англи үг бүрд:\n" +
-    "1) Кирилл бичигт буулгасан ойролцоо дуудлага (Монгол хүн уншиж шууд ойлгомжтой байх ёстой, жишээ нь \"mind\" -> \"майнд\")\n" +
-    "2) Тухайн үгийг агуулсан энгийн, өдөр тутмын ойлгомжтой богино (4-8 үгтэй) Англи өгүүлбэр (зөвхөн Англи хэл дээр, орчуулга хэрэггүй)\n" +
-    "гаргаж өг. ЗӨВХӨН JSON массив буцаа. Markdown тэмдэглэгээ, тайлбар, нэмэлт текст бичихгүй. Формат:\n" +
-    "[{\"i\":0,\"cyrillic\":\"...\",\"example_en\":\"...\"}]\n" +
+  var prompt = "Чи Монгол хэлээр Англи хэл сурдаг хүнд тусалдаг туслах. Доорх Англи үг бүрийг Кирилл бичигт " +
+    "буулгасан ойролцоо дуудлагыг гаргаж өг (Монгол хүн уншиж шууд ойлгомжтой байх ёстой, жишээ нь \"mind\" -> \"майнд\"). " +
+    "ЗӨВХӨН JSON массив буцаа. Markdown тэмдэглэгээ, тайлбар, нэмэлт текст бичихгүй. Формат:\n" +
+    "[{\"i\":0,\"cyrillic\":\"...\"}]\n" +
     "Үгс:\n" +
-    need.map(function(w,idx){ return idx+": "+w.en+" (mn: "+w.mn+")"; }).join("\n");
+    need.map(function(w,idx){ return idx+": "+w.en; }).join("\n");
 
   try{
     var res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -791,7 +1225,7 @@ async function ensureEnrichment(words){
       var item = arr[j];
       var w2 = need[item.i];
       if(!w2) continue;
-      var payload = {cyrillic:item.cyrillic||"", example_en:item.example_en||""};
+      var payload = {cyrillic:item.cyrillic||""};
       STATE.enrich[w2.key] = payload;
       await sSet("enrich:"+w2.key, JSON.stringify(payload));
     }
@@ -848,6 +1282,17 @@ function esc(s){
   return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
 
+// Жишээ өгүүлбэр доторх сурч буй үгийг бүдүүн (bold) болгож тодруулна
+function highlightWord(escapedSentence, word){
+  var w = String(word||"").replace(/^to\s+/i,"").trim();
+  if(!w || !escapedSentence) return escapedSentence;
+  var escapedWord = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  try{
+    var re = new RegExp("\\b(" + escapedWord + ")\\w*", "ig");
+    return escapedSentence.replace(re, function(m){ return "<b>"+m+"</b>"; });
+  }catch(e){ return escapedSentence; }
+}
+
 function render(){
   var app = document.getElementById("app");
   var learnedCount = Object.keys(STATE.progress.learned).length;
@@ -866,11 +1311,14 @@ function render(){
 }
 
 function renderTopbar(){
+  var themeIcon = STATE.theme === "light" ? "🌙" : "☀️";
   return "<div class='topbar'>" +
     "<div><div class='brand'><span class='dot'></span>Steppe Vocab</div>" +
     "<div class='date'>"+esc(formatDateMn())+"</div></div>" +
+    "<div style='display:flex; align-items:center; gap:8px;'>" +
+    "<button class='theme-toggle' data-action='toggleTheme' title='Горим сэлгэх'>"+themeIcon+"</button>" +
     "<div class='streak-chip'>🔥 "+STATE.progress.streak+"</div>" +
-    "</div>";
+    "</div></div>";
 }
 
 function renderTabbar(){
@@ -941,15 +1389,19 @@ function renderCard(w){
   var e = STATE.enrich[w.key];
   var flipped = !!STATE.todayFlip[w.key];
   var fav = !!STATE.progress.favorites[w.key];
-  var loadingCls = e ? "" : " skeleton";
-  var exampleBlock = e ?
-    ("<span class='ex-label'>Example</span><span class='ex-text'>"+esc(e.example_en)+"</span>") :
+  var exampleBlock = w.example_en ?
+    ("<span class='ex-label'>Example</span><span class='ex-text'>"+esc(w.example_en)+"</span>") :
+    "&nbsp;";
+  var backExampleBlock = w.example_en ?
+    ("<span class='ex-label'>Example</span><span class='ex-text'>"+highlightWord(esc(w.example_en), w.en)+"</span>" +
+     (w.example_mn ? "<span class='ex-text-mn'>"+esc(w.example_mn)+"</span>" : "")) :
     "&nbsp;";
   var cyr = e ? esc(e.cyrillic) : "";
+  var pronHtml = e ? (cyr ? ("🗣 "+cyr) : "") : "<span class='skeleton-line'></span>";
 
   return "<div class='card-scene'>" +
     "<div class='card"+(flipped?" flipped":"")+"' data-flip='"+w.key+"'>" +
-      "<div class='face front"+loadingCls+"'>" +
+      "<div class='face front'>" +
         "<div class='top-row'><span class='tag'>"+esc(w.cat)+"</span><span class='tap-hint'>Дарж эргүүл</span></div>" +
         "<div class='word'>"+esc(w.en)+"</div>" +
         "<div class='example'>"+exampleBlock+"</div>" +
@@ -959,11 +1411,11 @@ function renderCard(w){
           "<button class='icon-btn fav"+(fav?" active":"")+"' data-action='fav' data-key='"+w.key+"'>⭐</button>" +
         "</div>" +
       "</div>" +
-      "<div class='face back"+loadingCls+"'>" +
+      "<div class='face back'>" +
         "<div class='top-row'><span class='tag'>"+esc(w.cat)+"</span><span class='tap-hint'>Дарж эргүүл</span></div>" +
         "<div class='mn'>"+esc(w.mn)+"</div>" +
-        "<div class='pron'>"+(cyr?("🗣 "+cyr):"")+"</div>" +
-        "<div class='example'>"+exampleBlock+"</div>" +
+        "<div class='pron'>"+pronHtml+"</div>" +
+        "<div class='example'>"+backExampleBlock+"</div>" +
         "<div class='spacer'></div>" +
         "<div class='btn-row'>" +
           "<button class='icon-btn' data-action='listen' data-word='"+esc(w.en)+"'>🔊</button>" +
@@ -994,7 +1446,8 @@ function startQuiz(mode){
     index: 0,
     correct: 0,
     answered: null,
-    options: null
+    options: null,
+    spellingInput: ""
   };
   buildQuizQuestion();
   render();
@@ -1003,6 +1456,12 @@ function startQuiz(mode){
 function buildQuizQuestion(){
   var s = STATE.quizSession;
   var w = s.queue[s.index];
+  s.answered = null;
+  if(s.mode === "spelling"){
+    s.spellingInput = "";
+    s.options = null;
+    return;
+  }
 
   // Сүүлийн 2 өдрийн цээжилсэн үгс (өнөөдөр + өчигдөр = 16 үг орчим)
   var today = todayStr();
@@ -1040,6 +1499,39 @@ function buildQuizQuestion(){
   s.answered = null;
 }
 
+function buildSpellingHint(word, typed){
+  typed = typed || "";
+  var out = [];
+  for(var i=0;i<word.length;i++){
+    if(i===0){
+      out.push("<span class='hl first'>"+esc(word[i].toUpperCase())+"</span>");
+      continue;
+    }
+    if(i===word.length-1){
+      out.push("<span class='hl last'>"+esc(word[i].toUpperCase())+"</span>");
+      continue;
+    }
+    var typedChar = typed.charAt(i);
+    if(typedChar && typedChar.toLowerCase() !== word[i].toLowerCase()){
+      out.push("<span class='hl wrong'>⛔</span>");
+    } else {
+      out.push("<span class='hl dash'>-</span>");
+    }
+  }
+  return out.join("");
+}
+
+function submitSpelling(){
+  var s = STATE.quizSession;
+  if(!s || s.mode !== "spelling" || s.answered !== null) return;
+  var w = s.queue[s.index];
+  var typed = (s.spellingInput||"").trim();
+  var correct = typed.length > 0 && typed.toLowerCase() === w.en.trim().toLowerCase();
+  s.answered = correct;
+  if(correct) s.correct++;
+  render();
+}
+
 function renderQuiz(){
   var s = STATE.quizSession;
   if(!s){
@@ -1051,6 +1543,8 @@ function renderQuiz(){
       "<div class='q-main'>🇲🇳 → 🇬🇧</div><div class='q-sub'>Монгол орчуулгыг харж англи үгийг сонго</div></button>";
     html += "<button class='quiz-card' data-action='startQuiz' data-mode='listen' style='width:100%;'>" +
       "<div class='q-main'>🎧 Сонсголын шалгалт</div><div class='q-sub'>Дуудлагыг сонсоод зөв үгийг сонго</div></button>";
+    html += "<button class='quiz-card' data-action='startQuiz' data-mode='spelling' style='width:100%;'>" +
+      "<div class='q-main'>⌨️ Үг бичих дасгал</div><div class='q-sub'>Монгол орчуулгыг харж, англи үгийг зөв бичнэ үү</div></button>";
     return html;
   }
   if(s.index >= s.queue.length){
@@ -1066,6 +1560,27 @@ function renderQuiz(){
   var html = "";
   html += "<div class='quiz-progress'><span>"+(s.index+1)+" / "+s.queue.length+"</span><span>✓ "+s.correct+"</span></div>";
   html += "<div class='quiz-bar'><div class='fill' style='width:"+(100*s.index/s.queue.length)+"%'></div></div>";
+
+  if(s.mode === "spelling"){
+    var typed = s.spellingInput || "";
+    html += "<div class='quiz-card'><div class='q-eyebrow'>Орчуулгыг харж англи үгийг бич</div><div class='q-main' style='font-size:21px;'>"+esc(w.mn)+"</div></div>";
+    html += "<div class='spelling-wrap'>" +
+      "<div class='spelling-input-row'>" +
+        "<input id='spellingInput' class='spelling-input' type='text' autocomplete='off' autocapitalize='off' autocorrect='off' spellcheck='false' value='"+esc(typed)+"' "+(s.answered!==null?"disabled":"")+"/>" +
+        "<span class='spelling-count'>"+typed.length+"/"+w.en.length+"</span>" +
+      "</div>" +
+      "<div class='spelling-hint'>"+buildSpellingHint(w.en, typed)+"</div>" +
+    "</div>";
+    if(s.answered === null){
+      html += "<button class='btn-primary' data-action='submitSpelling'>Шалгах</button>";
+    } else {
+      if(!s.answered){
+        html += "<div class='spelling-answer'>Зөв хариулт: <b>"+esc(w.en)+"</b></div>";
+      }
+      html += "<button class='btn-primary' data-action='nextQuiz'>"+(s.index+1 < s.queue.length ? "Дараах асуулт" : "Үр дүн харах")+"</button>";
+    }
+    return html;
+  }
 
   if(s.mode === "translate"){
     html += "<div class='quiz-card'><div class='q-eyebrow'>Орчуулгыг сонго</div><div class='q-main'>"+esc(w.en)+"</div></div>";
@@ -1155,16 +1670,23 @@ function renderLearnedTab(){
 
   filtered.forEach(function(e){
     var w = e.word, m = e.meta;
-    html += "<div class='word-row' style='align-items:center;'>" +
-      "<div style='min-width:0;flex:1;'>" +
-        "<div class='w-en'>"+esc(w.en)+"</div>" +
-        "<div class='w-mn'>"+esc(w.mn)+"</div>" +
-        "<div class='cat-tag' style='margin-top:4px;'>"+esc(w.cat)+" · давталт "+(m.reviewCount||0)+" удаа · "+esc(formatLearnedDate(m.learnedDate))+"</div>" +
+    var learnedExampleBlock = w.example_en ?
+      ("<span class='ex-label'>Example</span><span class='ex-text'>"+highlightWord(esc(w.example_en), w.en)+"</span>" +
+       (w.example_mn ? "<span class='ex-text-mn'>"+esc(w.example_mn)+"</span>" : "")) :
+      "";
+    html += "<div class='word-row' style='flex-wrap:wrap;'>" +
+      "<div style='min-width:0;flex:1;display:flex;align-items:center;justify-content:space-between;gap:10px;'>" +
+        "<div style='min-width:0;'>" +
+          "<div class='w-en'>"+esc(w.en)+"</div>" +
+          "<div class='w-mn'>"+esc(w.mn)+"</div>" +
+          "<div class='cat-tag' style='margin-top:4px;'>"+esc(w.cat)+" · давталт "+(m.reviewCount||0)+" удаа · "+esc(formatLearnedDate(m.learnedDate))+"</div>" +
+        "</div>" +
+        "<div style='display:flex; gap:6px; flex-shrink:0;'>" +
+          "<button class='icon-btn' data-action='listen' data-word='"+esc(w.en)+"' title='Сонсох'>🔊</button>" +
+          "<button class='icon-btn' data-action='reviewWord' data-key='"+w.key+"' title='Давтах жагсаалт руу нэмэх'>🔁</button>" +
+        "</div>" +
       "</div>" +
-      "<div style='display:flex; gap:6px; flex-shrink:0;'>" +
-        "<button class='icon-btn' data-action='listen' data-word='"+esc(w.en)+"' title='Сонсох'>🔊</button>" +
-        "<button class='icon-btn' data-action='reviewWord' data-key='"+w.key+"' title='Давтах жагсаалт руу нэмэх'>🔁</button>" +
-      "</div>" +
+      (learnedExampleBlock ? "<div class='example' style='width:100%; margin-top:10px;'>"+learnedExampleBlock+"</div>" : "") +
     "</div>";
   });
 
@@ -1195,8 +1717,10 @@ function renderProgressTab(){
   html += "<div class='section-label'><div class='t'>Дата хадгалалт</div></div>";
   html += "<div style='display:flex; gap:8px;'>" +
     "<button class='btn-ghost' data-action='exportData' style='flex:1; margin-top:0;'>⬇️ Backup татах</button>" +
-    "<button class='btn-ghost' data-action='resetData' style='flex:1; margin-top:0; color:var(--coral);'>🗑 Цэвэрлэх</button>" +
+    "<button class='btn-ghost' data-action='importData' style='flex:1; margin-top:0;'>⬆️ Backup сэргээх</button>" +
     "</div>";
+  html += "<button class='btn-ghost' data-action='resetData' style='margin-top:8px; color:var(--coral);'>🗑 Бүх датаг цэвэрлэх</button>";
+  html += "<input type='file' id='importFileInput' accept='.json,application/json' style='display:none;'/>";
 
   html += "<div class='search-bar'><span>🔎</span><input id='searchInput' placeholder='Үг хайх...' value='"+esc(STATE.searchQuery)+"'/></div>";
 
@@ -1209,9 +1733,12 @@ function renderProgressTab(){
   list.forEach(function(w){
     var learned = !!STATE.progress.learned[w.key];
     html += "<div class='word-row'>" +
-      "<div><div class='w-en'>"+esc(w.en)+"</div><div class='w-mn'>"+esc(w.mn)+"</div></div>" +
-      "<div style='text-align:right;'><span class='cat-tag'>"+esc(w.cat)+"</span><br/>" +
-      "<span class='status-dot "+(learned?"learned":"pending")+"' style='display:inline-block;margin-top:4px;'></span></div>" +
+      "<div style='min-width:0;'><div class='w-en'>"+esc(w.en)+"</div><div class='w-mn'>"+esc(w.mn)+"</div></div>" +
+      "<div style='display:flex; align-items:center; gap:10px; flex-shrink:0;'>" +
+        "<div style='text-align:right;'><span class='cat-tag'>"+esc(w.cat)+"</span><br/>" +
+        "<span class='status-dot "+(learned?"learned":"pending")+"' style='display:inline-block;margin-top:4px;'></span></div>" +
+        (learned ? "" : "<button class='known-btn' data-action='markKnown' data-key='"+w.key+"' title='Би энэ үгийг мэднэ'>✓</button>") +
+      "</div>" +
       "</div>";
   });
   if(!list.length){
@@ -1354,6 +1881,37 @@ function attachHandlers(){
 
   var resetBtn = document.querySelector("[data-action='resetData']");
   if(resetBtn) resetBtn.addEventListener("click", resetData);
+
+  var importBtn = document.querySelector("[data-action='importData']");
+  var importFileInput = document.getElementById("importFileInput");
+  if(importBtn && importFileInput) importBtn.addEventListener("click", function(){ importFileInput.click(); });
+  if(importFileInput) importFileInput.addEventListener("change", handleImportFile);
+
+  var themeBtn = document.querySelector("[data-action='toggleTheme']");
+  if(themeBtn) themeBtn.addEventListener("click", toggleTheme);
+
+  document.querySelectorAll("[data-action='markKnown']").forEach(function(el){
+    el.addEventListener("click", function(ev){
+      ev.stopPropagation();
+      markKnown(el.getAttribute("data-key"));
+    });
+  });
+
+  var spellingInput = document.getElementById("spellingInput");
+  if(spellingInput){
+    spellingInput.addEventListener("input", function(){
+      STATE.quizSession.spellingInput = spellingInput.value;
+      render();
+      var again = document.getElementById("spellingInput");
+      if(again){ again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+    });
+    spellingInput.addEventListener("keydown", function(ev){
+      if(ev.key === "Enter"){ ev.preventDefault(); submitSpelling(); }
+    });
+    if(document.activeElement !== spellingInput) spellingInput.focus();
+  }
+  var submitSpellBtn = document.querySelector("[data-action='submitSpelling']");
+  if(submitSpellBtn) submitSpellBtn.addEventListener("click", submitSpelling);
 }
 
 function answerQuiz(idx){
@@ -1426,6 +1984,35 @@ function exportData(){
   }
 }
 
+function handleImportFile(ev){
+  var file = ev.target.files && ev.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = async function(e){
+    try{
+      var data = JSON.parse(e.target.result);
+      if(!data || typeof data !== "object") throw new Error("invalid backup file");
+      var ok = window.confirm("Backup файлыг сэргээхэд одоогийн ахиц дарагдана. Үргэлжлүүлэх үү?");
+      if(!ok) return;
+      if(data.progress){
+        await sSet("progress", JSON.stringify(data.progress));
+      }
+      if(data.enrich){
+        var keys = Object.keys(data.enrich);
+        for(var i=0;i<keys.length;i++){
+          await sSet("enrich:"+keys[i], JSON.stringify(data.enrich[keys[i]]));
+        }
+      }
+      toast("✅ Backup сэргээгдлээ. Дахин ачаалж байна...");
+      setTimeout(function(){ location.reload(); }, 900);
+    }catch(err){
+      console.error("import failed", err);
+      toast("⚠️ Файл уншихад алдаа гарлаа");
+    }
+  };
+  reader.readAsText(file);
+}
+
 async function resetData(){
   var ok = window.confirm("Бүх ахиц, цээжилсэн үг болон тохиргоог устгахдаа итгэлтэй байна уу? Энэ үйлдлийг буцаах боломжгүй.");
   if(!ok) return;
@@ -1433,63 +2020,4 @@ async function resetData(){
   STATE.todayFlip = {};
   STATE.quizSession = null;
   await saveProgress();
-  toast("🗑 Бүх дата цэвэрлэгдлээ");
-  render();
-}
-
-/* =========================================================
-   ONE-TIME SEED: 6-р сарын 28, 29-нд гар аргаар цээжилсэн үгс
-   ========================================================= */
-async function seedInitialProgress(){
-  var already = await sGet("seeded_2806");
-  if(already) return; // нэг л удаа ажиллана
-
-  // 28-ны өдөр цээжилсэн (индекс дугаараар)
-  var day28 = [0,3,2,7,1,4,5];   // bias, birch, binoculars, bogged down, bilingual, blockbuster, to blur
-  // 29-ны өдөр цээжилсэн
-  var day29 = [8,10,9,11,12,13,14,15]; // to breed, brick, to boost, brochure, brook, camcorder, camouflage, to capture
-
-  if(STATE.progress.completedDays < 2){
-    var t28 = new Date("2026-06-28T20:00:00").getTime();
-    var t29 = new Date("2026-06-29T20:00:00").getTime();
-    day28.forEach(function(idx){
-      var key = String(idx);
-      if(!STATE.progress.learned[key]){
-        STATE.progress.learned[key] = {learnedDate:"2026-06-28", lastReview:t28, reviewCount:0};
-      }
-    });
-    day29.forEach(function(idx){
-      var key = String(idx);
-      if(!STATE.progress.learned[key]){
-        STATE.progress.learned[key] = {learnedDate:"2026-06-29", lastReview:t29, reviewCount:0};
-      }
-    });
-    STATE.progress.completedDays = 2;
-    STATE.progress.lastCompletionDate = "2026-06-29";
-    STATE.progress.streak = Math.max(STATE.progress.streak, 2);
-    await saveProgress();
-  }
-  await sSet("seeded_2806", "1");
-}
-
-/* =========================================================
-   INIT
-   ========================================================= */
-async function init(){
-  await loadProgress();
-  await seedInitialProgress();
-  STATE.loading = false;
-  render();
-  var batch = todaysBatch();
-  var review = reviewBatch();
-  await ensureEnrichment(batch.concat(review));
-  render();
-}
-
-document.addEventListener("DOMContentLoaded", init);
-if(document.readyState !== "loading") init();
-
-})();
-</script>
-</body>
-</html>
+  toast("🗑
